@@ -4,6 +4,8 @@ on:
     branches: [ master ]
   pull_request:
     branches: [ master ]
+  workflow_dispatch:
+
 jobs:
   build:
     name: Build the Inno Setup Installer
@@ -30,7 +32,7 @@ jobs:
 
       - name: Set Windows specific CMake arguments
         id: windows_extra_cmake_args
-        run: echo "::set-output name=args::-DASSIMP_BUILD_ASSIMP_TOOLS=1 -DASSIMP_BUILD_ASSIMP_VIEW=1 -DASSIMP_BUILD_ZLIB=1"
+        run: echo "::set-output name=args::-DASSIMP_BUILD_ASSIMP_TOOLS=1 -DASSIMP_BUILD_ASSIMP_VIEW=1 -DASSIMP_BUILD_ZLIB=1 -DASSIMP_BUILD_USD_IMPORTER=ON -DASSIMP_WARNINGS_AS_ERRORS=OFF"
 
       - name: configure and build
         uses: lukka/run-cmake@v3

@@ -3,7 +3,8 @@ name: Build and Publish Prebuilt Binaries
 on:
   release:
     types: [created]
-    
+  workflow_dispatch:
+
 jobs:
   build:
     name: ${{ matrix.name }}
@@ -34,10 +35,10 @@ jobs:
       - uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: ${{ matrix.arch }}
-      
+
       - name: Build
         run: |
-          cmake -B build -S . ${{ matrix.cmake_args }} -DCMAKE_BUILD_TYPE=Release -DASSIMP_BUILD_TESTS=OFF
+          cmake -B build -S . ${{ matrix.cmake_args }} -DCMAKE_BUILD_TYPE=Release -DASSIMP_BUILD_TESTS=OFF -DASSIMP_BUILD_ASSIMP_TOOLS=ON -DASSIMP_BUILD_USD_IMPORTER=ON -DASSIMP_WARNINGS_AS_ERRORS=OFF
           cmake --build build --config Release
 
       - uses: TheDoctor0/zip-release@0.7.6
