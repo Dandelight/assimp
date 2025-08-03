@@ -2,6 +2,7 @@ name: Build Windows Installer
 on:
   push:
     branches: [ master ]
+    tags: [ 'v*' ]  # 添加 tag 触发
   pull_request:
     branches: [ master ]
   workflow_dispatch:
@@ -14,7 +15,6 @@ jobs:
       - uses: actions/checkout@v4
       - uses: lukka/get-cmake@latest
       - uses: ilammy/msvc-dev-cmd@v1
-
 
       - name: Cache DX SDK
         id: dxcache
@@ -32,19 +32,19 @@ jobs:
 
       - name: Set Windows specific CMake arguments
         id: windows_extra_cmake_args
-        run: echo "::set-output name=args::-DASSIMP_BUILD_ASSIMP_TOOLS=1 -DASSIMP_BUILD_ASSIMP_VIEW=1 -DASSIMP_BUILD_ZLIB=1 -DASSIMP_BUILD_USD_IMPORTER=ON -DASSIMP_WARNINGS_AS_ERRORS=OFF"
+        run: echo "args=-DASSIMP_BUILD_ASSIMP_TOOLS=1 -DASSIMP_BUILD_ASSIMP_VIEW=1 -DASSIMP_BUILD_ZLIB=1 -DASSIMP_BUILD_USD_IMPORTER=ON -DASSIMP_WARNINGS_AS_ERRORS=OFF" >> $GITHUB_OUTPUT
 
       - name: configure and build
         uses: lukka/run-cmake@v3
         env:
           DXSDK_DIR: '${{ github.workspace }}/DX_SDK'
-
         with:
           cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
           cmakeListsTxtPath: '${{ github.workspace }}/CMakeLists.txt'
           cmakeAppendedArgs: '-GNinja -DCMAKE_BUILD_TYPE=Release ${{ steps.windows_extra_cmake_args.outputs.args }} ${{ steps.hunter_extra_cmake_args.outputs.args }}'
           buildWithCMakeArgs: '--parallel 24 -v'
           buildDirectory: '${{ github.workspace }}/build/'
+
       - name: Prepare Inno Setup files
         run: |
           Invoke-WebRequest -Uri "https://aka.ms/vs/17/release/vc_redist.x64.exe" -OutFile "packaging/windows-innosetup/vc_redist.x64.exe"
@@ -55,3 +55,56 @@ jobs:
         with:
           path: packaging/windows-innosetup/script_x64.iss
           options: /O+
+
+      # 上传构建产物
+      - name: Upload Installer Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: assimp-installer-windows-x64
+          path: packaging/windows-innosetup/out/*.exe
+          retention-days: 7
+
+  # 只在 tag 推送时创建 release
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Installer Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: assimp-installer-windows-x64
+          path: ./installer/
+
+      - name: Get tag name
+        id: tag
+        run: echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: Release ${{ steps.tag.outputs.tag }}
+          body: |
+            ## Changes in ${{ steps.tag.outputs.tag }}
+
+            ### Windows Installer
+            - Windows x64 installer with all tools and libraries
+
+            ### Installation
+            1. Download the installer below
+            2. Run as administrator if needed
+            3. Follow the installation wizard
+
+            For more details, see the [changelog](CHANGELOG.md).
+          files: |
+            ./installer/*.exe
+          draft: false
+          prerelease: ${{ contains(steps.tag.outputs.tag, 'rc') || contains(steps.tag.outputs.tag, 'beta') || contains(steps.tag.outputs.tag, 'alpha') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
