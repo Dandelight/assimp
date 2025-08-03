@@ -45,6 +45,10 @@ jobs:
           cmakeAppendedArgs: '-GNinja -DCMAKE_BUILD_TYPE=Release ${{ steps.windows_extra_cmake_args.outputs.args }} ${{ steps.hunter_extra_cmake_args.outputs.args }}'
           buildWithCMakeArgs: '--parallel 24 -v'
           buildDirectory: '${{ github.workspace }}/build/'
+      - name: Prepare Inno Setup files
+        run: |
+          Invoke-WebRequest -Uri "https://aka.ms/vs/17/release/vc_redist.x64.exe" -OutFile "packaging/windows-innosetup/vc_redist.x64.exe"
+        shell: powershell
 
       - name: Compile .ISS to .EXE Installer
         uses: Minionguyjpro/Inno-Setup-Action@v1.2.5
