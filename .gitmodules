@@ -1,3 +1,4 @@
-[submodule "contrib/tinyusdz/repo"]
-	path = contrib/tinyusdz/repo
+[submodule "contrib/tinyusdz/autoclone/tinyusdz_repo-src"]
+	path = contrib/tinyusdz/autoclone/tinyusdz_repo-src
 	url = https://github.com/lighttransport/tinyusdz
+	shallow = true
